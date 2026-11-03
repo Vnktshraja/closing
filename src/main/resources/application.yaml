@@ -1,17 +1,19 @@
 spring:
   application:
     name: closing
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/reactive_db?currentSchema=reactive
-    username: xxxx
-    password: XXXX
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:reactive_db}?currentSchema=${DB_SCHEMA:reactive}
+    username: ${DB_USERNAME:XXXXX}
+    password: ${DB_PASSWORD:YYYYY}
     driver-class-name: org.postgresql.Driver
     hikari:
       pool-name: ClosingHikariPool
-      schema: reactive
-      minimum-idle: 5
-      maximum-pool-size: 20
+      schema: ${DB_SCHEMA:reactive}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
       idle-timeout: 300000
       max-lifetime: 1800000
       connection-timeout: 30000
@@ -22,12 +24,12 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
     open-in-view: false
     properties:
       hibernate:
-        default_schema: reactive
+        default_schema: ${DB_SCHEMA:reactive}
         format_sql: true
         jdbc:
           batch_size: 20
@@ -36,4 +38,4 @@ spring:
         order_updates: true
 
 server:
-  port: 8089
+  port: ${SERVER_PORT:8089}
