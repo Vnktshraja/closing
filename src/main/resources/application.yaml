@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: closing
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/reactive_db?currentSchema=reactive
+    username: xxxx
+    password: XXXX
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: ClosingHikariPool
+      schema: reactive
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
+      auto-commit: true
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: reactive
+        format_sql: true
+        jdbc:
+          batch_size: 20
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+
+server:
+  port: 8089

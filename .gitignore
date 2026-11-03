@@ -35,3 +35,28 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Logs ###
+*.log
+logs/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Environment / secrets ###
+.env
+.env.*
+!.env.example
+**/application-local.yaml
+**/application-local.yml
+**/application-local.properties
+
+### Gradle / misc ###
+.kotlin/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.swp
+*~
