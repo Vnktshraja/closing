@@ -1,10 +1,60 @@
+# ---- VCS ----
 .git
-.gradle
-build
-out
-.idea
+.gitignore
+.gitattributes
+.github
+
+# ---- Build output / caches ----
+build/
+out/
+.gradle/
+.kotlin/
+**/bin/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+*.war
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- IDE ----
+.idea/
 *.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+nbproject/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ---- Logs / test output ----
 *.log
-HELP.md
+logs/
+**/test-results/
+**/reports/
+
+# ---- Env / secrets (passed at runtime, never baked into the image) ----
 *.env
-docker-compose.yml
+.env
+.env.*
+**/application-local.*
+
+# ---- Docker / docs / misc not needed in the build context ----
+Dockerfile
+.dockerignore
+docker-compose*.yml
+docker/
+HELP.md
+README.md
+*.md
+LICENSE
