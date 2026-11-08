@@ -28,7 +28,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: vnkst/closing:${APP_VERSION:-latest}
+    image: vnkst/closing:${APP_VERSION:-0.1.0}
     container_name: closing-app
     restart: unless-stopped
     depends_on:
