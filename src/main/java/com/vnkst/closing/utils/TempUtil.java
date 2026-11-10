@@ -1,12 +1,11 @@
-package com.multiplier.reactive.util;
+package com.vnkst.closing.utils;
 
-import com.multiplier.reactive.entity.DailyRecord;
 import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-import static com.multiplier.reactive.util.DatesUtil.isWeekday;
+import static com.vnkst.closing.utils.DatesUtil.isWeekday;
 
 @Slf4j
 public class TempUtil {

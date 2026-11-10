@@ -1,4 +1,4 @@
-package com.multiplier.reactive.util;
+package com.vnkst.closing.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,13 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static com.multiplier.reactive.constants.CommonConstants.DATE;
-import static com.multiplier.reactive.constants.CommonConstants.TIME;
-
 @Slf4j
 @Service
 public class DatesUtil {
-
+    public static final LocalDate DATE = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+    public static final LocalTime TIME = LocalTime.now(ZoneId.of("Asia/Kolkata"));
     public static final LocalDate TODAY_DATE = LocalDate.now(ZoneId.of("Asia/Kolkata"));
     public static final LocalTime TODAY_TIME = LocalTime.now(ZoneId.of("Asia/Kolkata"));
     private static final LocalTime MARKET_START = LocalTime.of(9, 0);

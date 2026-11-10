@@ -1,12 +1,15 @@
-package com.multiplier.reactive.entity;
+package com.vnkst.closing.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDate;
 
@@ -14,40 +17,42 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(value = "fno_high_low", schema = "reactive")
+@Entity
+@Table(name = "fno_high_low", schema = "reactive")
 public class FNOHighLow {
 
     @Id
-    @Column("id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column("trading_symbol")
+    @Column(name = "trading_symbol")
     private String tradingSymbol;
 
-    @Column("previous_high")
+    @Column(name = "previous_high")
     private double previousHigh;
 
-    @Column("previous_low")
+    @Column(name = "previous_low")
     private double previousLow;
 
-    @Column("previous_open")
+    @Column(name = "previous_open")
     private double previousOpen;
 
-    @Column("previous_close")
+    @Column(name = "previous_close")
     private double previousClose;
 
-    @Column("weekly_high")
+    @Column(name = "weekly_high")
     private double weeklyHigh;
 
-    @Column("weekly_low")
+    @Column(name = "weekly_low")
     private double weeklyLow;
 
-    @Column("monthly_high")
+    @Column(name = "monthly_high")
     private double monthlyHigh;
 
-    @Column("monthly_low")
+    @Column(name = "monthly_low")
     private double monthlyLow;
 
-    @Column("created_date")
+    @Column(name = "created_date")
     private LocalDate createdDate;
 }

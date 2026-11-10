@@ -1,88 +1,93 @@
-package com.multiplier.reactive.entity;
+package com.vnkst.closing.entity;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDate;
 
 @Data
-@Table(value = "daily_record", schema = "reactive")
+@Entity
+@Table(name = "daily_record", schema = "reactive")
 public class DailyRecord {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column("symbol")
+    @Column(name = "symbol")
     private String symbol;
 
-    @Column("change_in_percent")
+    @Column(name = "change_in_percent")
     private double changeInPercent;
 
-    @Column("change_in_value")
+    @Column(name = "change_in_value")
     private double changeInValue;
 
-    @Column("ltp")
+    @Column(name = "ltp")
     private double ltp;
 
-    @Column("previous_close")
+    @Column(name = "previous_close")
     private double previousClose;
 
-    @Column("open")
+    @Column(name = "open")
     private double open;
 
-    @Column("close")
+    @Column(name = "close")
     private double close;
 
-    @Column("high")
+    @Column(name = "high")
     private double high;
 
-    @Column("low")
+    @Column(name = "low")
     private double low;
 
-    @Column("volume")
+    @Column(name = "volume")
     private long volume;
 
-    @Column("record_date")
+    @Column(name = "record_date")
     private LocalDate recordDate;
 
-    @Column("ema_9")
+    @Column(name = "ema_9")
     private double ema9;
 
-    @Column("ema_20")
+    @Column(name = "ema_20")
     private double ema20;
 
-    @Column("pivot")
+    @Column(name = "pivot")
     private double pivot;
 
-    @Column("resistance_1")
+    @Column(name = "resistance_1")
     private double resistance1;
 
-    @Column("support_1")
+    @Column(name = "support_1")
     private double support1;
 
-    @Column("resistance_2")
+    @Column(name = "resistance_2")
     private double resistance2;
 
-    @Column("support_2")
+    @Column(name = "support_2")
     private double support2;
 
-    @Column("resistance_3")
+    @Column(name = "resistance_3")
     private double resistance3;
 
-    @Column("support_3")
+    @Column(name = "support_3")
     private double support3;
 
-    @Column("weekly_high")
+    @Column(name = "weekly_high")
     private double weeklyHigh;
 
-    @Column("weekly_low")
+    @Column(name = "weekly_low")
     private double weeklyLow;
 
-    @Column("monthly_high")
+    @Column(name = "monthly_high")
     private double monthlyHigh;
 
-    @Column("monthly_low")
+    @Column(name = "monthly_low")
     private double monthlyLow;
 }

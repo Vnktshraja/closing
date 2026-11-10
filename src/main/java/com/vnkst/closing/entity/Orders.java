@@ -1,14 +1,14 @@
-package com.multiplier.reactive.entity;
+package com.vnkst.closing.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
-
-import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDate;
@@ -17,13 +17,14 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(value = "orders", schema = "reactive")
+@Entity
+@Table(name = "orders", schema = "reactive")
 public class Orders implements Persistable<String> {
     @Id
-    @Column("groww_order_id")
+    @Column(name = "groww_order_id")
     private String groww_order_id;
 
-    @Column("is_new")
+    @Column(name = "is_new")
     private boolean isNew = false;
 
     @Override
@@ -42,56 +43,56 @@ public class Orders implements Persistable<String> {
         this.isNew = isNew;
     }
 
-    @Column("symbol")
+    @Column(name = "symbol")
     private String symbol;
 
-    @Column("order_state")
+    @Column(name = "order_state")
     private String order_state;
 
-    @Column("options")
+    @Column(name = "options")
     private String options;
 
-    @Column("order_reference_id")
+    @Column(name = "order_reference_id")
     private String order_reference_id;
 
-    @Column("quantity")
+    @Column(name = "quantity")
     private int quantity;
 
-    @Column("bought_price")
+    @Column(name = "bought_price")
     private double boughtPrice;
 
-    @Column("sold_price")
+    @Column(name = "sold_price")
     private double soldPrice;
 
-    @Column("segment")
+    @Column(name = "segment")
     private String segment;
 
-    @Column("transaction_type")
+    @Column(name = "transaction_type")
     private String transaction_type;
 
-    @Column("pnl")
+    @Column(name = "pnl")
     private double pnl;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    @Column("order_placed_time")
+    @Column(name = "order_placed_time")
     private LocalDateTime order_placed_Time;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    @Column("order_closed_time")
+    @Column(name = "order_closed_time")
     private LocalDateTime order_closed_Time;
 
-    @Column("transaction_date")
+    @Column(name = "transaction_date")
     private LocalDate transaction_date;
 
-    @Column("remark")
+    @Column(name = "remark")
     private String remark;
 
-    @Column("order_type")
+    @Column(name = "order_type")
     private String order_type;
 
-    @Column("closing_reason")
+    @Column(name = "closing_reason")
     private String closing_reason;
 
-    @Column("status")
+    @Column(name = "status")
     private String status;
 }

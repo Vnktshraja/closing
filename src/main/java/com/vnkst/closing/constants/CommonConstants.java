@@ -1,4 +1,4 @@
-package com.multiplier.reactive.constants;
+package com.vnkst.closing.constants;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
