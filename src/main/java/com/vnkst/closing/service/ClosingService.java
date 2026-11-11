@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.vnkst.closing.constants.CommonConstants.ACTIVE;
-import static com.vnkst.closing.constants.CommonConstants.MANUAL;
 import static com.vnkst.closing.constants.CommonConstants.PRICE;
 import static com.vnkst.closing.constants.CommonConstants.QUANTITY;
 import static com.vnkst.closing.utils.TempUtil.isMarketHours;
@@ -46,20 +46,22 @@ public class ClosingService {
     @Autowired
     private FourHoursService fourHoursService;
 
-    private final Set<String> processedManualOrderSymbols = ConcurrentHashMap.newKeySet();
-    private final AtomicBoolean isManual4HourSyncRunning = new AtomicBoolean(false);
+    private final Set<String> processedOrderSymbols = ConcurrentHashMap.newKeySet();
+    private final AtomicBoolean isCandleSyncRunning = new AtomicBoolean(false);
 
     /**
      * Scheduled job running every 1 minute during market hours to monitor active
      * orders for exit conditions.
+     *
+     * When active orders are found for the first time (or missing from FNOHighLow cache),
+     * it fetches 7-day 1-hour candles and 30-day 4-hour candles, calculates and saves
+     * FNOHighLow (previousClose, weeklyHigh, weeklyLow, monthlyHigh, monthlyLow) to DB and DataCache.
+     *
      * Evaluates live Last Traded Price (LTP) against active positions to trigger
      * auto-sell orders under:
      * 1. Max Loss Threshold: Position P&L falls to or below -₹500 (MAX_LOSS_500).
-     * 2. Technical Stop Loss: Live price drops below the previous day's close
-     * (STOP_LOSS).
-     * 3. Take Profit: Live price reaches or exceeds the monthly high (TAKE_PROFIT).
-     * Automatically triggers sell orders via orderPlacingService and removes exited
-     * symbols from dataCache.
+     * 2. Technical Stop Loss: Live price drops below previous day's close, weekly low, or monthly low.
+     * 3. Take Profit: Live price reaches or exceeds monthly high or weekly high.
      */
     @Scheduled(fixedRate = 60 * 1000, zone = "Asia/Kolkata") // Every 1 minute
     public void checkActiveOrdersForLoss() {
@@ -69,30 +71,34 @@ public class ClosingService {
         try {
             Map<String, Map<String, Object>> activeSymbols = dataCache.getActiveSymbols();
             if (activeSymbols == null || activeSymbols.isEmpty()) {
-                return;
+                syncActiveOrdersFromDbToCache();
+                activeSymbols = dataCache.getActiveSymbols();
+                if (activeSymbols == null || activeSymbols.isEmpty()) {
+                    return;
+                }
             }
 
-            // Evict symbols that are no longer active from processed manual orders tracker
-            processedManualOrderSymbols.removeIf(sym -> !activeSymbols.containsKey(sym));
+            // Evict symbols that are no longer active from processed orders tracker
+            processedOrderSymbols.removeIf(sym -> !dataCache.getActiveSymbols().containsKey(sym));
             List<String> symbolsToCheck = new ArrayList<>(activeSymbols.keySet());
 
-            List<String> newManualSymbols = findNewManualOrderSymbols(activeSymbols);
-            if (!newManualSymbols.isEmpty() && isManual4HourSyncRunning.compareAndSet(false, true)) {
+            List<String> newOrderSymbols = findNewOrderSymbols(activeSymbols);
+            if (!newOrderSymbols.isEmpty() && isCandleSyncRunning.compareAndSet(false, true)) {
                 try {
                     log.info(
-                            "[Loss-Check] First time manual order found for symbol(s): {}. Starting 7-day 1-hour & 30-day 4-hour candle track and FNO high/low update...",
-                            newManualSymbols);
-                    run30Days4HourCandlesAndFnoHighLow(newManualSymbols);
-                    processedManualOrderSymbols.addAll(newManualSymbols);
+                            "[Loss-Check] First time active order(s) found for symbol(s): {}. Starting 7-day 1-hour & 30-day 4-hour candle track and FNO high/low update...",
+                            newOrderSymbols);
+                    run30Days4HourCandlesAndFnoHighLow(newOrderSymbols);
+                    processedOrderSymbols.addAll(newOrderSymbols);
                     log.info(
-                            "[Loss-Check] Successfully completed candle track and FNO high/low update for manual symbols: {}",
-                            newManualSymbols);
+                            "[Loss-Check] Successfully completed candle track and FNO high/low update for symbols: {}",
+                            newOrderSymbols);
                 } catch (Exception err) {
                     log.error(
-                            "[Loss-Check] Error running candle track for manual orders: {}",
-                            newManualSymbols, err);
+                            "[Loss-Check] Error running candle track for first-time orders: {}",
+                            newOrderSymbols, err);
                 } finally {
-                    isManual4HourSyncRunning.set(false);
+                    isCandleSyncRunning.set(false);
                 }
             }
 
@@ -159,23 +165,19 @@ public class ClosingService {
                             symbol, livePrice));
                 }
 
-                // 2. Check Technical Stop Loss / Take Profit if not already triggered by Max Loss
+                // 2. Check Technical Stop Loss / Take Profit using FNOHighLow (prevClose, weeklyHigh/Low, monthlyHigh/Low)
                 if (!shouldExit && fnoMap != null) {
-                    FNOHighLow prev = fnoMap.get(symbol);
-                    if (prev == null) {
-                        String cleanSymbol = symbol.replaceAll("^(NSE|BSE)[_:]", "");
-                        prev = fnoMap.get(cleanSymbol);
-                    }
-                    if (prev == null) {
-                        prev = fnoMap.get("NSE_" + symbol);
-                    }
+                    FNOHighLow prev = resolveFnoHighLow(fnoMap, symbol);
                     if (prev != null) {
                         double prevClose = prev.getPreviousClose();
+                        double weeklyHigh = prev.getWeeklyHigh();
+                        double weeklyLow = prev.getWeeklyLow();
                         double monthlyHigh = prev.getMonthlyHigh();
+                        double monthlyLow = prev.getMonthlyLow();
 
                         log.info(
-                                "[Loss-Check] Symbol: {}, Live Price: {}, Previous Close: {}, Monthly High: {}",
-                                symbol, livePrice, prevClose, monthlyHigh);
+                                "[Loss-Check] Symbol: {}, Live Price: {}, Prev Close: {}, Weekly Low: {}, Weekly High: {}, Monthly Low: {}, Monthly High: {}",
+                                symbol, livePrice, prevClose, weeklyLow, weeklyHigh, monthlyLow, monthlyHigh);
 
                         if (prevClose > 0 && livePrice < prevClose) {
                             shouldExit = true;
@@ -185,6 +187,22 @@ public class ClosingService {
                             log.warn(
                                     "[Loss-Check] Price dropped below previous close! Triggering exit for symbol: {}, livePrice: {}, prevClose: {}",
                                     symbol, livePrice, prevClose);
+                        } else if (weeklyLow > 0 && livePrice <= weeklyLow) {
+                            shouldExit = true;
+                            exitType = String.format(
+                                    "STOP_LOSS_WEEKLY_LOW: Live price %.2f dropped to/below weekly low %.2f",
+                                    livePrice, weeklyLow);
+                            log.warn(
+                                    "[Loss-Check] Price dropped to/below weekly low! Triggering exit for symbol: {}, livePrice: {}, weeklyLow: {}",
+                                    symbol, livePrice, weeklyLow);
+                        } else if (monthlyLow > 0 && livePrice <= monthlyLow) {
+                            shouldExit = true;
+                            exitType = String.format(
+                                    "STOP_LOSS_MONTHLY_LOW: Live price %.2f dropped to/below monthly low %.2f",
+                                    livePrice, monthlyLow);
+                            log.warn(
+                                    "[Loss-Check] Price dropped to/below monthly low! Triggering exit for symbol: {}, livePrice: {}, monthlyLow: {}",
+                                    symbol, livePrice, monthlyLow);
                         } else if (monthlyHigh > 0 && livePrice >= monthlyHigh) {
                             shouldExit = true;
                             exitType = String.format(
@@ -193,6 +211,14 @@ public class ClosingService {
                             log.info(
                                     "[Loss-Check] Price hit/crossed monthly high! Triggering exit for symbol: {}, livePrice: {}, monthlyHigh: {}",
                                     symbol, livePrice, monthlyHigh);
+                        } else if (weeklyHigh > 0 && livePrice >= weeklyHigh) {
+                            shouldExit = true;
+                            exitType = String.format(
+                                    "TAKE_PROFIT_WEEKLY_HIGH: Live price %.2f reached or crossed weekly high %.2f",
+                                    livePrice, weeklyHigh);
+                            log.info(
+                                    "[Loss-Check] Price hit/crossed weekly high! Triggering exit for symbol: {}, livePrice: {}, weeklyHigh: {}",
+                                    symbol, livePrice, weeklyHigh);
                         }
                     }
                 }
@@ -220,10 +246,10 @@ public class ClosingService {
     /**
      * Executes 1-hour candles processing for 7 days (-7 days to currentday -1)
      * and 4-hour candles processing for 30 days (-30 days to currentday -1)
-     * in a separate flow only for newly placed active orders,
-     * and updates fno_high_low table and dataCache (weeklyHigh, monthlyHigh, prevClose, etc.).
+     * for newly detected active orders, and updates fno_high_low table and dataCache
+     * (weeklyHigh, weeklyLow, monthlyHigh, monthlyLow, prevClose, etc.).
      */
-    public void run30Days4HourCandlesAndFnoHighLow(List<String> manualSymbols) {
+    public void run30Days4HourCandlesAndFnoHighLow(List<String> symbols) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         LocalDate endDate = today.minusDays(1);
         String endDateTime = endDate + " 15:30:00";
@@ -239,65 +265,91 @@ public class ClosingService {
         String startDateTime30 = startDate30 + " 09:15:00";
         String encodedStart30 = URLEncoder.encode(startDateTime30, StandardCharsets.UTF_8);
 
-        log.info("[ManualOrder-CandleTrack] Running 7-day 1-hour and 30-day 4-hour candles for manual orders: {}",
-                manualSymbols);
+        log.info("[Order-CandleTrack] Running 7-day 1-hour and 30-day 4-hour candles for active orders: {}",
+                symbols);
 
         try {
-            oneHourService.process1HoursForSymbols(manualSymbols, encodedStart7, encodedEnd);
-            fourHoursService.process4HoursForSymbols(manualSymbols, encodedStart30, encodedEnd);
-            oneHourService.calculateAndSaveFnoHighLowForSymbols(manualSymbols, today);
+            oneHourService.process1HoursForSymbols(symbols, encodedStart7, encodedEnd);
+            fourHoursService.process4HoursForSymbols(symbols, encodedStart30, encodedEnd);
+            oneHourService.calculateAndSaveFnoHighLowForSymbols(symbols, today);
+            dataCache.loadLatestAndLast5CandlesOf1HourCandles();
             dataCache.loadLatestAndLast2CandlesOf4HourCandles();
             log.info(
-                    "[ManualOrder-CandleTrack] Successfully saved 7-day 1-hr & 30-day 4-hr candles and updated fno_high_low & cache for active manual symbols: {}",
-                    manualSymbols);
+                    "[Order-CandleTrack] Successfully saved 7-day 1-hr & 30-day 4-hr candles and updated fno_high_low & cache for active symbols: {}",
+                    symbols);
         } catch (Exception err) {
             log.error(
-                    "[ManualOrder-CandleTrack] Failed to process candle history or update FNO high/low for active manual symbols: {}",
-                    manualSymbols, err);
+                    "[Order-CandleTrack] Failed to process candle history or update FNO high/low for active symbols: {}",
+                    symbols, err);
         }
     }
 
-    private List<String> findNewManualOrderSymbols(Map<String, Map<String, Object>> activeSymbols) {
-        List<String> manualSymbols = new ArrayList<>();
-        List<String> unknownSymbols = new ArrayList<>();
+    /**
+     * Finds any active order symbols that are encountered for the first time
+     * (whether AUTO or MANUAL) or are missing from the FNOHighLow cache.
+     */
+    private List<String> findNewOrderSymbols(Map<String, Map<String, Object>> activeSymbols) {
+        Set<String> newSymbols = new LinkedHashSet<>();
+        Map<String, FNOHighLow> fnoMap = dataCache.getFnoHighAndLow();
 
-        for (Map.Entry<String, Map<String, Object>> entry : activeSymbols.entrySet()) {
-            String symbol = entry.getKey();
-            if (processedManualOrderSymbols.contains(symbol)) {
-                continue;
-            }
-            Map<String, Object> info = entry.getValue();
-            Object typeObj = info != null
-                    ? (info.get("order_type") != null ? info.get("order_type") : info.get("orderType"))
-                    : null;
-            if (typeObj != null) {
-                if (MANUAL.equalsIgnoreCase(typeObj.toString())) {
-                    manualSymbols.add(symbol);
-                }
-            } else {
-                unknownSymbols.add(symbol);
-            }
-        }
-
-        if (unknownSymbols.isEmpty()) {
-            return manualSymbols;
-        }
-
+        // Sync any active orders from DB that might not be in activeSymbols yet
         List<Orders> activeOrders = ordersRepository.getOrdersByState(ACTIVE);
         for (Orders order : activeOrders) {
-            if (order.getSymbol() != null && unknownSymbols.contains(order.getSymbol())) {
-                Map<String, Object> info = activeSymbols.get(order.getSymbol());
-                if (info != null && order.getOrder_type() != null) {
+            if (order != null && order.getSymbol() != null) {
+                String sym = order.getSymbol();
+                Map<String, Object> info = activeSymbols.get(sym);
+                if (info == null) {
+                    info = new HashMap<>();
+                    info.put(PRICE, order.getBoughtPrice());
+                    info.put(QUANTITY, order.getQuantity());
                     info.put("order_type", order.getOrder_type());
-                }
-                if (MANUAL.equalsIgnoreCase(order.getOrder_type())
-                        && !processedManualOrderSymbols.contains(order.getSymbol())) {
-                    manualSymbols.add(order.getSymbol());
+                    dataCache.addActiveSymbols(sym, info);
+                } else if (info.get("order_type") == null && order.getOrder_type() != null) {
+                    info.put("order_type", order.getOrder_type());
                 }
             }
         }
 
-        return new ArrayList<>(new LinkedHashSet<>(manualSymbols));
+        for (String symbol : dataCache.getActiveSymbols().keySet()) {
+            boolean missingFnoStats = (fnoMap == null || resolveFnoHighLow(fnoMap, symbol) == null);
+            if (!processedOrderSymbols.contains(symbol) || missingFnoStats) {
+                newSymbols.add(symbol);
+            }
+        }
+
+        return new ArrayList<>(newSymbols);
+    }
+
+    private void syncActiveOrdersFromDbToCache() {
+        try {
+            List<Orders> activeOrders = ordersRepository.getOrdersByState(ACTIVE);
+            for (Orders order : activeOrders) {
+                if (order != null && order.getSymbol() != null) {
+                    Map<String, Object> valueMap = new HashMap<>();
+                    valueMap.put(PRICE, order.getBoughtPrice());
+                    valueMap.put(QUANTITY, order.getQuantity());
+                    valueMap.put("order_type", order.getOrder_type());
+                    dataCache.addActiveSymbols(order.getSymbol(), valueMap);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Loss-Check] Failed to sync active orders from DB to cache", e);
+        }
+    }
+
+    private FNOHighLow resolveFnoHighLow(Map<String, FNOHighLow> fnoMap, String symbol) {
+        if (fnoMap == null || symbol == null) {
+            return null;
+        }
+        FNOHighLow prev = fnoMap.get(symbol);
+        if (prev == null) {
+            String cleanSymbol = symbol.replaceAll("^(NSE|BSE)[_:]", "");
+            prev = fnoMap.get(cleanSymbol);
+        }
+        if (prev == null) {
+            prev = fnoMap.get("NSE_" + symbol);
+        }
+        return prev;
     }
 
     private double resolveLivePrice(Map<String, Double> ltpMap, String symbol) {
