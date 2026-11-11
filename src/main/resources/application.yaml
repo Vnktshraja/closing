@@ -2,12 +2,12 @@ spring:
   application:
     name: closing
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:${PROFILE:dev}}
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:reactive_db}?currentSchema=${DB_SCHEMA:reactive}
-    username: ${DB_USERNAME:XXXXX}
-    password: ${DB_PASSWORD:YYYYY}
+    url: ${POSTGRES_URL:jdbc:postgresql://${POSTGRES_SERVER:${DB_HOST:localhost}}:${POSTGRES_PORT:${DB_PORT:5432}}/${POSTGRES_DB:${DB_NAME:reactive_db}}?currentSchema=${DB_SCHEMA:reactive}}
+    username: ${POSTGRES_USER:${DB_USERNAME:Vnktsh}}
+    password: ${POSTGRES_PASSWORD:${DB_PASSWORD:Vnktsh@1}}
     driver-class-name: org.postgresql.Driver
     hikari:
       pool-name: ClosingHikariPool
@@ -24,8 +24,8 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:true}
+      ddl-auto: ${JPA_DDL_AUTO:none}
+    show-sql: ${JPA_SHOW_SQL:false}
     open-in-view: false
     properties:
       hibernate:
@@ -33,9 +33,12 @@ spring:
         format_sql: true
         jdbc:
           batch_size: 20
-          time_zone: UTC
+          time_zone: Asia/Kolkata
         order_inserts: true
         order_updates: true
+
+groww_api_key: ${GROWW_API_KEY:eyJraWQiOiJaTUtjVXciLCJhbGciOiJFUzI1NiJ9.eyJleHAiOjI1ODI2NDMyMTcsImlhdCI6MTc5NDI0MzIxNywibmJmIjoxNzk0MjQzMjE3LCJzdWIiOiJ7XCJ0b2tlblJlZklkXCI6XCI4ZDMyNmVkNC1lNzFjLTQ1ODEtODQ3Ni1iNGNjNjU3ZDhmYjFcIixcInZlbmRvckludGVncmF0aW9uS2V5XCI6XCJlMzFmZjIzYjA4NmI0MDZjODg3NGIyZjZkODQ5NTMxM1wiLFwidXNlckFjY291bnRJZFwiOlwiYmFmNjQ4N2MtNmNiMC00ZGI3LTk0ODktYzYwMTJjYjVmZWFmXCIsXCJkZXZpY2VJZFwiOlwiYWIxNDNmMzAtMGJjMy01MjJlLTlhMDItNGM4N2RlNzc2MWJmXCIsXCJzZXNzaW9uSWRcIjpcImEwN2IxY2JkLWY3NDAtNDFhYi1hZWI3LWE3ODhiYjUyZTExY1wiLFwiYWRkaXRpb25hbERhdGFcIjpcIno1NC9NZzltdjE2WXdmb0gvS0EwYkJEUGd6cHdpOEZLR0RlMW5QSjVJdEpSTkczdTlLa2pWZDNoWjU1ZStNZERhWXBOVi9UOUxIRmtQejFFQisybTdRPT1cIixcInJvbGVcIjpcImF1dGgtdG90cFwiLFwic291cmNlSXBBZGRyZXNzXCI6XCIyNDA2Ojc0MDA6Y2U6ODNhOmNkNWU6YzQ0NTpkYTE2OmI4OTUsMTYyLjE1OC41NC43NiwzNS4yNDEuMjMuMTIzXCIsXCJ0d29GYUV4cGlyeVRzXCI6MjU4MjY0MzIxNzA3NixcInZlbmRvck5hbWVcIjpcImdyb3d3QXBpXCJ9IiwiaXNzIjoiYXBleC1hdXRoLXByb2QtYXBwIn0.NXKaeFFYRP7SJdMHU8lHtmo5Ha_zk9EWp3iCWlSz93EyfFgVAVvY-y-TcfcOEq3e2plq04YHap85XQy7_9d1_w}
+groww_secret: ${GROWW_API_SECRET:JGJLtOsp5hDy#LW&1NT%gBvcC$9p#^5T}
 
 server:
   port: ${SERVER_PORT:8089}

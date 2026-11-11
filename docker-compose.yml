@@ -1,46 +1,38 @@
-# Usage:
-#   docker compose --env-file dev.env up --build
-#   docker compose --env-file prod.env up --build -d
-name: closing
-
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: closing-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-reactive_db}
-      POSTGRES_USER: ${DB_USERNAME:-XXXXX}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-YYYYY}
-      DB_SCHEMA: ${DB_SCHEMA:-reactive}
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  closing:
+  closing-app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: vnkst/closing:${APP_VERSION:-0.1.0}
+    image: ${IMAGE_TAG:-closing-app:latest}
     container_name: closing-app
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file:
-      - ${ENV_FILE:-dev.env}
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
     ports:
       - "${SERVER_PORT:-8089}:8089"
+    environment:
+      TZ: Asia/Kolkata
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Kolkata"
+      SPRING_PROFILES_ACTIVE: ${PROFILE:-dev}
+      SERVER_PORT: 8089
+      POSTGRES_SERVER: ${POSTGRES_SERVER:-shared-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-reactive_db}
+      POSTGRES_USER: ${POSTGRES_USER:-Vnktsh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Vnktsh@1}
+      POSTGRES_URL: ${POSTGRES_URL:-jdbc:postgresql://${POSTGRES_SERVER:-shared-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-reactive_db}?currentSchema=reactive}
+      DB_HOST: ${POSTGRES_SERVER:-shared-postgres}
+      DB_PORT: ${POSTGRES_PORT:-5432}
+      DB_NAME: ${POSTGRES_DB:-reactive_db}
+      DB_SCHEMA: ${DB_SCHEMA:-reactive}
+      DB_USERNAME: ${POSTGRES_USER:-Vnktsh}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-Vnktsh@1}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-none}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL:-false}
+      GROWW_API_KEY: ${GROWW_API_KEY:-eyJraWQiOiJaTUtjVXciLCJhbGciOiJFUzI1NiJ9.eyJleHAiOjI1ODI2NDMyMTcsImlhdCI6MTc5NDI0MzIxNywibmJmIjoxNzk0MjQzMjE3LCJzdWIiOiJ7XCJ0b2tlblJlZklkXCI6XCI4ZDMyNmVkNC1lNzFjLTQ1ODEtODQ3Ni1iNGNjNjU3ZDhmYjFcIixcInZlbmRvckludGVncmF0aW9uS2V5XCI6XCJlMzFmZjIzYjA4NmI0MDZjODg3NGIyZjZkODQ5NTMxM1wiLFwidXNlckFjY291bnRJZFwiOlwiYmFmNjQ4N2MtNmNiMC00ZGI3LTk0ODktYzYwMTJjYjVmZWFmXCIsXCJkZXZpY2VJZFwiOlwiYWIxNDNmMzAtMGJjMy01MjJlLTlhMDItNGM4N2RlNzc2MWJmXCIsXCJzZXNzaW9uSWRcIjpcImEwN2IxY2JkLWY3NDAtNDFhYi1hZWI3LWE3ODhiYjUyZTExY1wiLFwiYWRkaXRpb25hbERhdGFcIjpcIno1NC9NZzltdjE2WXdmb0gvS0EwYkJEUGd6cHdpOEZLR0RlMW5QSjVJdEpSTkczdTlLa2pWZDNoWjU1ZStNZERhWXBOVi9UOUxIRmtQejFFQisybTdRPT1cIixcInJvbGVcIjpcImF1dGgtdG90cFwiLFwic291cmNlSXBBZGRyZXNzXCI6XCIyNDA2Ojc0MDA6Y2U6ODNhOmNkNWU6YzQ0NTpkYTE2OmI4OTUsMTYyLjE1OC41NC43NiwzNS4yNDEuMjMuMTIzXCIsXCJ0d29GYUV4cGlyeVRzXCI6MjU4MjY0MzIxNzA3NixcInZlbmRvck5hbWVcIjpcImdyb3d3QXBpXCJ9IiwiaXNzIjoiYXBleC1hdXRoLXByb2QtYXBwIn0.NXKaeFFYRP7SJdMHU8lHtmo5Ha_zk9EWp3iCWlSz93EyfFgVAVvY-y-TcfcOEq3e2plq04YHap85XQy7_9d1_w}
+      GROWW_API_SECRET: ${GROWW_API_SECRET:-JGJLtOsp5hDy#LW&1NT%gBvcC$9p#^5T}
+    networks:
+      - shared-network
 
-volumes:
-  postgres-data:
+networks:
+  shared-network:
+    name: shared-network
+    external: true
