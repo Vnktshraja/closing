@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${IMAGE_TAG:-closing-app:latest}
+    image: ${IMAGE_TAG:-${DOCKER_USERNAME:-vnktshraja96}/closing-app:latest}
     container_name: closing-app
     restart: unless-stopped
     ports:
