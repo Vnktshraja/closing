@@ -1,23 +1,19 @@
 package com.vnkst.closing.service;
 
 import com.vnkst.closing.cache.DataCache;
-import com.vnkst.closing.entity.AccessToken;
 import com.vnkst.closing.entity.Orders;
 import com.vnkst.closing.repository.OrdersRepository;
 import com.vnkst.closing.utils.TempUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -39,55 +35,6 @@ public class GrowwServer {
     private final DataCache dataCache;
     private final OrdersRepository ordersRepository;
     private final ClientHttp clientHttp;
-
-    @Value("${groww_api_key:}")
-    private String apiKey;
-
-    public AccessToken generateToken(String checksum) throws IOException, InterruptedException {
-        return generateToken(checksum, Instant.now().getEpochSecond());
-    }
-
-    public AccessToken generateToken(String checksum, long timestamp) throws IOException, InterruptedException {
-        String keyType = "approval";
-        String jsonBody = String.format("""
-            {
-                "key_type": "%s",
-                "checksum": "%s",
-                "timestamp": "%s"
-            }
-            """, keyType, checksum, timestamp);
-
-        String baseUrl = "https://api.groww.in/v1/token/api/access";
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl))
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", APP_JSON)
-                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-                .build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response == null) {
-            throw new IOException("Empty response body");
-        }
-        if (response.statusCode() != 200) {
-            log.error("Groww token API returned HTTP {}: {}", response.statusCode(), response.body());
-            throw new IOException("Groww token API error: HTTP " + response.statusCode() + " - " + response.body());
-        }
-        try {
-            if (response.body().contains("header")) {
-                log.warn("Data from Groww while getting token API: Token key not found or inactive");
-                return null;
-            }
-            AccessToken accessToken = mapper.readValue(response.body(), AccessToken.class);
-            if (accessToken.getToken() == null) {
-                log.error("Groww response missing token. Response: {}", response.body());
-                throw new IOException("Groww response missing token: " + response.body());
-            }
-            return accessToken;
-        } catch (Exception e) {
-            log.error("Failed to parse Groww token response: {}", response.body(), e);
-            throw new IOException("Failed to parse market data", e);
-        }
-    }
 
     public String callApi(String url) {
         return executeGetWithToken(url, "testKey1");
