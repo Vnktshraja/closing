@@ -18,7 +18,6 @@ public class TokenConfig {
     private final TokenRepository accessTokenRepo;
     private final TokenCache tokenCache;
 
-    @PostConstruct
     public void loadTokensFromDb() {
         try {
             List<Tokens> fromDb = accessTokenRepo.findAll();

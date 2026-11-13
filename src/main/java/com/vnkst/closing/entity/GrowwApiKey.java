@@ -12,6 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -35,5 +36,5 @@ public class GrowwApiKey {
     private String apiSecret;
 
     @Column(name = "today")
-    private LocalDateTime today;
+    private LocalDate today;
 }
