@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -21,18 +20,18 @@ import java.time.LocalDateTime;
 @Builder
 @ToString
 @Entity
-@Table(name = "growwApiKey", schema = "reactive")
+@Table(name = "growwapikey", schema = "reactive")
 public class GrowwApiKey {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private Integer id;
+    private Long id;
 
-    @Column(name = "apiKey", columnDefinition = "VARCHAR(MAX)")
+    @Column(name = "apikey", columnDefinition = "TEXT")
     private String apiKey;
 
-    @Column(name = "apiSecret")
+    @Column(name = "apisecret")
     private String apiSecret;
 
     @Column(name = "today")
